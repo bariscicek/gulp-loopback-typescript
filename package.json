@@ -1,4 +1,6 @@
 {
+  "name": "gulp-loopback-typescript",
+	"description": "gulp task for generating typescript definitions",
   "author": {
     "name": "bariscicek",
     "email": "baris@agri-t.com",
