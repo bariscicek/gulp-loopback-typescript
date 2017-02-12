@@ -1,7 +1,7 @@
 {
   "name": "gulp-loopback-typescript",
 	"description": "gulp task for generating typescript definitions",
-	"version": "0.0.0.1",
+	"version": "0.0.1",
   "author": {
     "name": "bariscicek",
     "email": "baris@agri-t.com",
