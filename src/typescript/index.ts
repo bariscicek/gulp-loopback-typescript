@@ -9,7 +9,7 @@ interface IOptions {
   dest?: string;
 }
 
-export const typescriptPlugin = (options: IOptions) => {
+const typescriptPlugin = (options: IOptions) => {
 
   const stream = through.obj((file, enc, callback) => {
     console.log(file);
@@ -19,3 +19,8 @@ export const typescriptPlugin = (options: IOptions) => {
 
   return stream;
 };
+
+export default typescriptPlugin;
+
+module.exports = typescriptPlugin;
+module.exports.default = typescriptPlugin;
