@@ -1,14 +1,23 @@
 {
   "name": "gulp-loopback-typescript",
-	"description": "gulp task for generating typescript definitions",
-	"version": "0.0.1",
+  "description": "gulp task for generating typescript definitions",
+  "version": "0.0.1",
+  "main": "index.js",
   "author": {
     "name": "bariscicek",
     "email": "baris@agri-t.com",
     "url": "http://www.nerd.com.tr"
   },
+  "license": "MIT",
   "bugs": {
     "url": "https://github.com/bariscicek/gulp-loopback-typescript/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bariscicek/gulp-loopback-typescript.git"
+  },
+  "dependencies": {
+    "gulp-util": "^3.0.8",
+    "through2": "^2.0.3"
   }
-  
 }
