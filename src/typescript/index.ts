@@ -4,11 +4,14 @@ import * as through from "through2";
 import * as gutil from "gulp-util";
 import * as ejs from "ejs";
 import * as _ from "lodash";
+import * as mkdirp from "mkdirp";
 import * as path from "path";
 import * as pluralize from "pluralize";
 import { readdirSync, readFileSync, writeFileSync } from "fs";
 
 let models = [];
+
+ejs.filters.q = (obj) => JSON.stringify(obj, null, 2);
 
 interface IOptions {
   /**
@@ -69,7 +72,7 @@ const typescriptPlugin = (options: IOptions) => {
      * SDK INDEXES
      */
     {
-      template: path.join(__dirname, "./src/esj/index.ejs"),
+      template: path.join(__dirname, "./src/ejs/index.ejs"),
       output: options.dest + "/models/index.ts",
       params: {
         models: models
@@ -77,12 +80,17 @@ const typescriptPlugin = (options: IOptions) => {
     }
   ];
 
+  mkdirp.sync(options.dest + "/models");
+
   const stream = through.obj((file, enc, callback) => {
     let model: any = {};
     let modelName = null;
 
     try {
-      model = JSON.parse(file.toString("utf-8"));
+      model = JSON.parse(file._contents.toString("utf-8"));
+      if (!model.relations) {
+        model.relations = {};
+      }
       modelName = model.name;
     } catch (e) {
       return callback(new Error("Could not parse the model file"));
@@ -203,7 +211,7 @@ function buildPropertyDefaultValue(property) {
  * Discovers property type according related models that are public
  */
 function buildRelationType(model, relationName) {
-  let relation = model.sharedClass.ctor.relations[relationName];
+  let relation = model.relations[relationName];
   let targetClass = relation.targetClass;
   let basicType = (models[targetClass]) ? targetClass : "any";
   let finalType = relation.type.match(/(hasOne|belongsTo)/g)
@@ -212,9 +220,9 @@ function buildRelationType(model, relationName) {
 }
 
 function getModelRelations(model) {
-  return Object.keys(model.sharedClass.ctor.relations).filter(relationName =>
-      model.sharedClass.ctor.relations[relationName].targetClass &&
-      model.sharedClass.ctor.relations[relationName].targetClass !== model.name
+  return Object.keys(model.relations).filter(relationName =>
+      model.relations[relationName].targetClass &&
+      model.relations[relationName].targetClass !== model.name
   );
 }
 
@@ -229,7 +237,7 @@ function buildModelImports(model) {
   let output = [];
   if (relations.length > 0) {
     relations.forEach((relationName, i) => {
-      let targetClass = model.sharedClass.ctor.relations[relationName].targetClass;
+      let targetClass = model.relations[relationName].targetClass;
       if (!loaded[targetClass]) {
         loaded[targetClass] = true;
         output.push(`  ${targetClass}`);
@@ -273,7 +281,7 @@ function buildModelProperties(model, isInterface) {
     output.push(`  ${property}${isOptional}: ${buildPropertyType(meta.type)}${defaultValue};`);
   });
   // Add Model Relations
-  Object.keys(model.sharedClass.ctor.relations).forEach(relation => {
+  Object.keys(model.relations).forEach(relation => {
     let relationType = buildRelationType( model, relation );
     // let defaultTypeValue = !isInterface && ctx.defaultValue === "enabled" && relationType.indexOf("Array") >= 0 ? " = []" : ";
     let defaultTypeValue = "";
