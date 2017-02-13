@@ -30,3 +30,4 @@ directory specified in the dest option.
 Todo:
 [ ] methods
 [ ] relations
+[ ] handling default values
