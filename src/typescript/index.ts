@@ -1,3 +1,5 @@
+declare var module: any;
+
 import * as through from "through2";
 import * as gutil from "gulp-util";
 
