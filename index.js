@@ -5,7 +5,6 @@ var _ = require("lodash");
 var path = require("path");
 var pluralize = require("pluralize");
 var fs_1 = require("fs");
-ejs.filters.pluralize = function (text) { return pluralize.plural(text); };
 var models = [];
 ;
 ;
@@ -69,7 +68,7 @@ var typescriptPlugin = function (options) {
             params: {
                 model: model,
                 modelName: modelName,
-                plural: ejs.filters.pluralize(modelName),
+                plural: pluralize.plural(modelName),
                 buildPropertyType: buildPropertyType,
                 buildPropertyDefaultValue: buildPropertyDefaultValue,
                 buildRelationType: buildRelationType,
