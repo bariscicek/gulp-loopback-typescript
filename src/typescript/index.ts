@@ -11,7 +11,7 @@ interface IOptions {
 
 export const typescriptPlugin = (options: IOptions) => {
 
-  const stream = through2.obj((file, enc, callback) => {
+  const stream = through.obj((file, enc, callback) => {
     console.log(file);
 
     callback();
