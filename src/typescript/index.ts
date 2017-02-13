@@ -8,8 +8,6 @@ import * as path from "path";
 import * as pluralize from "pluralize";
 import { readdirSync, readFileSync, writeFileSync } from "fs";
 
-ejs.filters.pluralize = (text) => pluralize.plural(text);
-
 let models = [];
 
 interface IOptions {
@@ -103,7 +101,7 @@ const typescriptPlugin = (options: IOptions) => {
         params: {
           model: model,
           modelName: modelName,
-          plural: ejs.filters.pluralize(modelName),
+          plural: pluralize.plural(modelName),
           buildPropertyType: buildPropertyType,
           buildPropertyDefaultValue: buildPropertyDefaultValue,
           buildRelationType: buildRelationType,
