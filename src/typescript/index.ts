@@ -2,7 +2,6 @@ declare var module: any;
 
 import * as through from "through2";
 import * as gutil from "gulp-util";
-import * as ejs from "ejs";
 import * as _ from "lodash";
 import * as mkdirp from "mkdirp";
 import * as rimraf from "rimraf";
@@ -10,7 +9,11 @@ import * as path from "path";
 import * as pluralize from "pluralize";
 import { readdirSync, readFileSync, writeFileSync } from "fs";
 
+const ejs = require("ejs");
+
 let models = {};
+
+
 
 ejs.filters.q = (obj) => JSON.stringify(obj, null, 2);
 
@@ -214,7 +217,7 @@ function buildPropertyType(type, propName = null, prop = null) {
  * @description
  * Define defaults null values for class properties
  */
-function buildPropertyDefaultValue(property) {
+function buildPropertyDefaultValue(property): any {
   let defaultValue = ( property.hasOwnProperty("default") ) ? property.default : "";
   switch (typeof property.type) {
     case "function":
@@ -340,7 +343,13 @@ function buildModelProperties(model, isInterface) {
     // defaultValue = ctx.defaultValue === "strict" && !meta.hasOwnProperty("default") ? " : defaultValue;
     output.push(`  /**`);
     if (model.properties[property].description) {
-      output.push(`   * ${model.properties[property].description}`);
+      if (Array.isArray(model.properties[property].description)) {
+        _.each(model.properties[property].description, desc => {
+          output.push(`   * ${desc}`);
+        });
+      } else {
+        output.push(`   * ${model.properties[property].description}`);
+      }
     }
     output.push(`   * @param ${buildPropertyType(meta.type, property, model.properties[property])}`);
     output.push(`   */`);
