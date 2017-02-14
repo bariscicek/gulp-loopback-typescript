@@ -5,11 +5,12 @@ import * as gutil from "gulp-util";
 import * as ejs from "ejs";
 import * as _ from "lodash";
 import * as mkdirp from "mkdirp";
+import * as rimraf from "rimraf";
 import * as path from "path";
 import * as pluralize from "pluralize";
 import { readdirSync, readFileSync, writeFileSync } from "fs";
 
-let models = [];
+let models = {};
 
 ejs.filters.q = (obj) => JSON.stringify(obj, null, 2);
 
@@ -46,10 +47,10 @@ const typescriptPlugin = (options: IOptions) => {
 
 
   if (!options.modelDir) {
-    options.modelDir = path.join(__dirname, "..", "..", "src", "typescript", "common", "models");
+    options.modelDir = path.join(__dirname,  "..", "src", "typescript", "common", "models");
   }
 
-  models = _.map(_.filter(readdirSync(options.modelDir), (dir) => { return dir.indexOf(".json") !== -1; }), modelFile => {
+  let _models = _.map(_.filter(readdirSync(options.modelDir), (dir) => { return dir.indexOf(".json") !== -1; }), modelFile => {
     let modelFileContent = readFileSync(path.join(options.modelDir, modelFile));
     let modelFileContentObject = {
       name: null
@@ -63,7 +64,7 @@ const typescriptPlugin = (options: IOptions) => {
     }
   }); // map
 
-  _.each(_.clone(models), model => {
+  _.each(_.values(_models), model => {
     models[model.name] = model;
   });
 
@@ -73,25 +74,32 @@ const typescriptPlugin = (options: IOptions) => {
      */
     {
       template: path.join(__dirname, "./src/ejs/index.ejs"),
-      output: options.dest + "/models/index.ts",
+      output: options.dest + "/models/index.d.ts",
       params: {
         models: models
       }
     }
   ];
 
+  rimraf.sync(options.dest + "/models");
   mkdirp.sync(options.dest + "/models");
 
   const stream = through.obj((file, enc, callback) => {
     let model: any = {};
     let modelName = null;
+    let modelBaseName = "Model";
 
     try {
       model = JSON.parse(file._contents.toString("utf-8"));
       if (!model.relations) {
         model.relations = {};
+      } else {
+        _.mapKeys(model.relations, (value: any, key) => {
+          model.relations[key].targetClass = value.model;
+        });
       }
       modelName = model.name;
+      modelBaseName = model.base || "Model";
     } catch (e) {
       return callback(new Error("Could not parse the model file"));
     }
@@ -105,10 +113,11 @@ const typescriptPlugin = (options: IOptions) => {
       */
       {
         template: path.join(__dirname, "./src/ejs/model.ejs"),
-        output: options.dest + "/models/" + modelName + ".ts",
+        output: options.dest + "/models/" + modelName + ".d.ts",
         params: {
           model: model,
           modelName: modelName,
+          modelBaseName: modelBaseName,
           plural: pluralize.plural(modelName),
           buildPropertyType: buildPropertyType,
           buildPropertyDefaultValue: buildPropertyDefaultValue,
@@ -142,30 +151,57 @@ const typescriptPlugin = (options: IOptions) => {
 
 /**
  * @author João Ribeiro <jonnybgod@gmail.com, http://jonnybgod.ghost.io>,
+ * @author Baris Cicek <barisc@yandex.com>
  * @license MIT
  * @method buildPropertyType
  * @description
  * Define which properties should be passed as route params
  */
-function buildPropertyType(type) {
-  switch (typeof type) {
-    case "function":
-      switch(type.name) {
-        case "String":
-        case "Number":
-        case "Boolean":
-          return type.name.toLowerCase();
-        case "Date":
-        case "GeoPoint":
-          return type.name;
-        default:
-          return "any";
+function buildPropertyType(type, propName = null, prop = null) {
+  if (!type && prop) {
+    if (Array.isArray(prop)) {
+      if (prop[0].type) {
+        return `Array<${buildPropertyType(prop[0].type)}>`
       }
-    case "object":
-      if(Array.isArray(type)) {
-          return `Array<${buildPropertyType(type[0])}>`
+
+      // no type means it is interface
+      return `Array<I${_.capitalize(propName)}>`;
+
+    } else if (typeof prop == "object") {
+      if (prop.type) {
+        type = prop.type;
+      } else {
+        return `I${_.capitalize(propName)}`;
       }
-      return "object";
+    } else if (typeof prop === "string") { // handle property: "Sring" definitions
+      type = prop;
+    }
+  } else if (!type) {
+    return "any";
+  }
+
+  // strip the quotes if any
+  if (typeof type == 'string') {
+    type = type.replace(/\"\'\s/g, "");
+  }
+
+  if (typeof type == 'object') {
+    if (Array.isArray(type)) {
+      return `Array<${buildPropertyType(type[0])}>`
+    }
+
+    return "object";
+  }
+
+  switch (type) {
+    case "String":
+    case "Number":
+    case "Boolean":
+      return type.toLowerCase();
+    case "Date":
+    case "GeoPoint":
+      return type;
+    
     default:
       return "any";
   }
@@ -213,7 +249,8 @@ function buildPropertyDefaultValue(property) {
 function buildRelationType(model, relationName) {
   let relation = model.relations[relationName];
   let targetClass = relation.targetClass;
-  let basicType = (models[targetClass]) ? targetClass : "any";
+  // basic type should be an interface of the targetClass
+  let basicType = (models[targetClass]) ? `I${targetClass}` : "any";
   let finalType = relation.type.match(/(hasOne|belongsTo)/g)
     ? basicType : `${basicType}[]`;
   return finalType;
@@ -246,7 +283,7 @@ function buildModelImports(model) {
   }
   // Add GeoPoint custom type import
   Object.keys(model.properties).forEach((property) => {
-    var geoPointType = buildPropertyType(model.properties[property].type);
+    var geoPointType = buildPropertyType(model.properties[property].type, property, model.properties);
     var hasGeoPointType = geoPointType.indexOf("GeoPoint") !== -1;
     if(hasGeoPointType) {
         output.push("  GeoPoint");
@@ -260,6 +297,29 @@ function buildModelImports(model) {
         "} from \"../index\";\n"
       ];
   }
+
+  // build sub interfaces
+  let interfaces = {};
+  Object.keys(model.properties).forEach((propertyName) => {
+    let property = model.properties[propertyName];  
+    if (!property.type) {
+      let subModel: any = {
+        properties: property,
+        relations: {}
+      };
+
+      if (Array.isArray(property)) {
+        subModel.properties = _.reduce(property, (m, c) => { return _.extend(m, c); });
+      }
+
+      interfaces['I' + _.capitalize(propertyName)] = buildModelProperties(subModel, true);
+    }
+  });
+
+  _.each(_.keys(interfaces), (iface) => {
+    output.push(`interface ${iface} { \n${interfaces[iface]} \n};\n`);
+  });
+  
   return output.join("\n");
 }
 
@@ -278,7 +338,13 @@ function buildModelProperties(model, isInterface) {
     let defaultValue = !isInterface ? ` = ${buildPropertyDefaultValue(meta)}` : "";
     // defaultValue = ctx.defaultValue !== "enabled" && ctx.defaultValue !== "strict" ? " : defaultValue;
     // defaultValue = ctx.defaultValue === "strict" && !meta.hasOwnProperty("default") ? " : defaultValue;
-    output.push(`  ${property}${isOptional}: ${buildPropertyType(meta.type)}${defaultValue};`);
+    output.push(`  /**`);
+    if (model.properties[property].description) {
+      output.push(`   * ${model.properties[property].description}`);
+    }
+    output.push(`   * @param ${buildPropertyType(meta.type, property, model.properties[property])}`);
+    output.push(`   */`);
+    output.push(`  ${property}${isOptional}: ${buildPropertyType(meta.type, property, model.properties[property])}${defaultValue};`);
   });
   // Add Model Relations
   Object.keys(model.relations).forEach(relation => {
@@ -286,6 +352,10 @@ function buildModelProperties(model, isInterface) {
     // let defaultTypeValue = !isInterface && ctx.defaultValue === "enabled" && relationType.indexOf("Array") >= 0 ? " = []" : ";
     let defaultTypeValue = "";
     // defaultTypeValue = !isInterface && ctx.defaultValue === "enabled" && relationType.indexOf("Array") === -1 ? " = null" : defaultTypeValue;
+    output.push(`  /**`);
+    output.push(`   * ${model.relations[relation].type} relation for ${model.name}`);
+    output.push(`   * @param ${relationType}`);
+    output.push(`   */`);
     output.push( `  ${relation}${isInterface ? "?" : ""}: ${relationType}${defaultTypeValue};` );
   });
   return output.join("\n");
