@@ -1,12 +1,9 @@
-import { <%- modelBaseName %> } from "../index";
-
-/* tslint:disable */
-<%- buildModelImports(model) %>
-export interface I<%- modelName %> {
+/* <%- modelName %> definitions start */
+interface I<%- modelName %> {
 <%- buildModelProperties(model, true) %>
 }
 
-export declare class <%- modelName %> extends PersistedModel implements I<%- modelName %> {
+class <%- modelName %> extends <%- modelBaseName %> implements I<%- modelName %> {
 <%- buildModelProperties(model, true) %>
   /**
    * The name of the model represented by this $resource,
@@ -48,3 +45,4 @@ export declare class <%- modelName %> extends PersistedModel implements I<%- mod
     }
   }
 }
+/* <%- modelName %> definitions end */

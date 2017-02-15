@@ -42,6 +42,13 @@ interface ISchema {
 };
 
 
+const indent = (str: string, indent: number, space: boolean = false, tabstop = 2) => {
+
+  const pad = _.map(_.range(0, space ? indent * tabstop : indent), seq => space ? " " : "\t").join("");
+
+  return pad + str.replace(/\n/g, "\n" + pad);
+};
+
 const typescriptPlugin = (options: IOptions) => {
 
   if (!options.dest) {
@@ -51,6 +58,16 @@ const typescriptPlugin = (options: IOptions) => {
 
   if (!options.modelDir) {
     options.modelDir = path.join(__dirname,  "..", "src", "typescript", "common", "models");
+  }
+
+  let loopBackDefitionContent = '';
+
+  try {
+    loopBackDefitionContent = readFileSync(path.join(options.dest, "index.d.ts")).toString("utf-8");
+    
+  } catch (e) {
+    console.warn(`Could not read definitions file for loopback. Try installing @types/loopback`);
+    return null;
   }
 
   let _models = _.map(_.filter(readdirSync(options.modelDir), (dir) => { return dir.indexOf(".json") !== -1; }), modelFile => {
@@ -75,13 +92,13 @@ const typescriptPlugin = (options: IOptions) => {
     /**
      * SDK INDEXES
      */
-    {
-      template: path.join(__dirname, "./src/ejs/index.ejs"),
-      output: options.dest + "/models/index.d.ts",
-      params: {
-        models: models
-      }
-    }
+    // {
+    //   template: path.join(__dirname, "./src/ejs/index.ejs"),
+    //   output: options.dest + "/models/index.d.ts",
+    //   params: {
+    //     models: models
+    //   }
+    // }
   ];
 
   rimraf.sync(options.dest + "/models");
@@ -132,19 +149,27 @@ const typescriptPlugin = (options: IOptions) => {
     ); // push
 
 
-  schema.forEach(
-    config => {
-      console.info("Generating: %s", `${config.output}`);
-      writeFileSync(
-        `${config.output}`,
-        ejs.render(readFileSync(
-          require.resolve(config.template),
-          { encoding: "utf-8" }),
-          config.params
-        )
-      )
+    let output = '';
+
+    schema.forEach(
+      config => {
+        console.info("Generating: %s", `${config.output}`);
+        output += ejs.render(readFileSync(
+            require.resolve(config.template),
+            { encoding: "utf-8" }),
+            config.params
+          );
+      }
+    );
+
+    output += "\n/* gulp-loopback-typescript: definitions end */";
+    if (/\/\* gulp-loopback-typescript: definitions end \*\//.exec(loopBackDefitionContent)) {
+      loopBackDefitionContent = loopBackDefitionContent.replace(new RegExp("declare namespace l {[\s\S]*/\* model definitions end \*/", ""), "declare namespace l {\n" + indent(output, 3, true));
+    } else {
+      loopBackDefitionContent = loopBackDefitionContent.replace(new RegExp("declare namespace l {", ""), "declare namespace l {\n" + indent(output, 3, true));      
     }
-  );
+
+    writeFileSync(path.join(options.dest, "index.d.ts"), loopBackDefitionContent);
 
     callback();
   });
@@ -280,7 +305,7 @@ function buildModelImports(model) {
       let targetClass = model.relations[relationName].targetClass;
       if (!loaded[targetClass]) {
         loaded[targetClass] = true;
-        output.push(`  ${targetClass}`);
+        output.push(`  I${targetClass}`);
       }
     });
   }
