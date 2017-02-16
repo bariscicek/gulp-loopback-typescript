@@ -1,37 +1,39 @@
 "use strict";
-const through = require("through2");
-const _ = require("lodash");
-const path = require("path");
-const pluralize = require("pluralize");
-const fs_1 = require("fs");
-const ejs = require("ejs");
-let models = {};
-ejs.filters.q = (obj) => JSON.stringify(obj, null, 2);
+var through = require("through2");
+var _ = require("lodash");
+var path = require("path");
+var pluralize = require("pluralize");
+var fs_1 = require("fs");
+var ejs = require("ejs");
+var models = {};
+ejs.filters.q = function (obj) { return JSON.stringify(obj, null, 2); };
 ;
 ;
 ;
-const indent = (str, indent, space = false, tabstop = 2) => {
-    const pad = _.map(_.range(0, space ? indent * tabstop : indent), seq => space ? " " : "\t").join("");
+var indent = function (str, indent, space, tabstop) {
+    if (space === void 0) { space = false; }
+    if (tabstop === void 0) { tabstop = 2; }
+    var pad = _.map(_.range(0, space ? indent * tabstop : indent), function (seq) { return space ? " " : "\t"; }).join("");
     return pad + str.replace(/\n/g, "\n" + pad);
 };
-const typescriptPlugin = (options) => {
+var typescriptPlugin = function (options) {
     if (!options.dest) {
         options.dest = path.join(__dirname, "..", "@types", "loopback");
     }
     if (!options.modelDir) {
         options.modelDir = path.join(__dirname, "..", "src", "typescript", "common", "models");
     }
-    let loopBackDefitionContent = '';
+    var loopBackDefitionContent = '';
     try {
         loopBackDefitionContent = fs_1.readFileSync(path.join(options.dest, "index.d.ts")).toString("utf-8");
     }
     catch (e) {
-        console.warn(`Could not read definitions file for loopback. Try installing @types/loopback`);
+        console.warn("Could not read definitions file for loopback. Try installing @types/loopback");
         return null;
     }
-    let _models = _.map(_.filter(fs_1.readdirSync(options.modelDir), (dir) => { return dir.indexOf(".json") !== -1; }), modelFile => {
-        let modelFileContent = fs_1.readFileSync(path.join(options.modelDir, modelFile));
-        let modelFileContentObject = {
+    var _models = _.map(_.filter(fs_1.readdirSync(options.modelDir), function (dir) { return dir.indexOf(".json") !== -1; }), function (modelFile) {
+        var modelFileContent = fs_1.readFileSync(path.join(options.modelDir, modelFile));
+        var modelFileContentObject = {
             name: null
         };
         try {
@@ -39,26 +41,26 @@ const typescriptPlugin = (options) => {
             return modelFileContentObject;
         }
         catch (e) {
-            console.warn(`Could not read the model file for ${modelFile}`);
+            console.warn("Could not read the model file for " + modelFile);
             return null;
         }
     }); // map
-    _.each(_.values(_models), model => {
+    _.each(_.values(_models), function (model) {
         models[model.name] = model;
     });
-    let output = '';
-    const stream = through.obj((file, enc, callback) => {
-        let model = {};
-        let modelName = null;
-        let modelBaseName = "Model";
-        let schema = [];
+    var output = '';
+    var stream = through.obj(function (file, enc, callback) {
+        var model = {};
+        var modelName = null;
+        var modelBaseName = "Model";
+        var schema = [];
         try {
             model = JSON.parse(file._contents.toString("utf-8"));
             if (!model.relations) {
                 model.relations = {};
             }
             else {
-                _.mapKeys(model.relations, (value, key) => {
+                _.mapKeys(model.relations, function (value, key) {
                     model.relations[key].targetClass = value.model;
                 });
             }
@@ -86,12 +88,12 @@ const typescriptPlugin = (options) => {
                 buildPropertyType: buildPropertyType,
                 buildPropertyDefaultValue: buildPropertyDefaultValue,
                 buildRelationType: buildRelationType,
-                buildModelImports,
-                buildModelProperties
+                buildModelImports: buildModelImports,
+                buildModelProperties: buildModelProperties
             }
         }); // push
-        schema.forEach(config => {
-            console.info("Generating: %s", `${config.output}`);
+        schema.forEach(function (config) {
+            console.info("Generating: %s", "" + config.output);
             output += ejs.render(fs_1.readFileSync(require.resolve(config.template), { encoding: "utf-8" }), config.params);
         });
         if (/\/\* gulp-loopback-typescript: definitions end \*\//.exec(loopBackDefitionContent)) {
@@ -115,21 +117,23 @@ const typescriptPlugin = (options) => {
  * @description
  * Define which properties should be passed as route params
  */
-function buildPropertyType(type, propName = null, prop = null) {
+function buildPropertyType(type, propName, prop) {
+    if (propName === void 0) { propName = null; }
+    if (prop === void 0) { prop = null; }
     if (!type && prop) {
         if (Array.isArray(prop)) {
             if (prop[0].type) {
-                return `Array<${buildPropertyType(prop[0].type)}>`;
+                return "Array<" + buildPropertyType(prop[0].type) + ">";
             }
             // no type means it is interface
-            return `Array<I${_.capitalize(propName)}>`;
+            return "Array<I" + _.capitalize(propName) + ">";
         }
         else if (typeof prop == "object") {
             if (prop.type) {
                 type = prop.type;
             }
             else {
-                return `I${_.capitalize(propName)}`;
+                return "I" + _.capitalize(propName);
             }
         }
         else if (typeof prop === "string") {
@@ -145,7 +149,7 @@ function buildPropertyType(type, propName = null, prop = null) {
     }
     if (typeof type == 'object') {
         if (Array.isArray(type)) {
-            return `Array<${buildPropertyType(type[0])}>`;
+            return "Array<" + buildPropertyType(type[0]) + ">";
         }
         return "object";
     }
@@ -169,18 +173,18 @@ function buildPropertyType(type, propName = null, prop = null) {
  * Define defaults null values for class properties
  */
 function buildPropertyDefaultValue(property) {
-    let defaultValue = (property.hasOwnProperty("default")) ? property.default : "";
+    var defaultValue = (property.hasOwnProperty("default")) ? property.default : "";
     switch (typeof property.type) {
         case "function":
             switch (property.type.name) {
                 case "String":
-                    return `"${defaultValue}"`;
+                    return "\"" + defaultValue + "\"";
                 case "Number":
                     return isNaN(Number(defaultValue)) ? 0 : Number(defaultValue);
                 case "Boolean":
                     return Boolean(defaultValue);
                 case "Date":
-                    return isNaN(Date.parse(defaultValue)) ? `new Date(0)` : `new Date("${defaultValue}")`;
+                    return isNaN(Date.parse(defaultValue)) ? "new Date(0)" : "new Date(\"" + defaultValue + "\")";
                 case "GeoPoint":
                 default:
                     return "<any>null";
@@ -200,17 +204,19 @@ function buildPropertyDefaultValue(property) {
  * Discovers property type according related models that are public
  */
 function buildRelationType(model, relationName) {
-    let relation = model.relations[relationName];
-    let targetClass = relation.targetClass;
+    var relation = model.relations[relationName];
+    var targetClass = relation.targetClass;
     // basic type should be an interface of the targetClass
-    let basicType = (models[targetClass]) ? `I${targetClass}` : "any";
-    let finalType = relation.type.match(/(hasOne|belongsTo)/g)
-        ? basicType : `${basicType}[]`;
+    var basicType = (models[targetClass]) ? "" + targetClass : "any";
+    var finalType = relation.type.match(/(hasOne|belongsTo)/g)
+        ? basicType : basicType + "[]";
     return finalType;
 }
 function getModelRelations(model) {
-    return Object.keys(model.relations).filter(relationName => model.relations[relationName].targetClass &&
-        model.relations[relationName].targetClass !== model.name);
+    return Object.keys(model.relations).filter(function (relationName) {
+        return model.relations[relationName].targetClass &&
+            model.relations[relationName].targetClass !== model.name;
+    });
 }
 /**
  * @method buildModelImports
@@ -218,9 +224,9 @@ function getModelRelations(model) {
  * Define import statement for those model who are related to other scopes
  */
 function buildModelImports(model) {
-    let relations = getModelRelations(model);
-    let loaded = {};
-    let output = [];
+    var relations = getModelRelations(model);
+    var loaded = {};
+    var output = [];
     // if (relations.length > 0) {
     //   relations.forEach((relationName, i) => {
     //     let targetClass = model.relations[relationName].targetClass;
@@ -247,22 +253,22 @@ function buildModelImports(model) {
     //     ];
     // }
     // build sub interfaces
-    let interfaces = {};
-    Object.keys(model.properties).forEach((propertyName) => {
-        let property = model.properties[propertyName];
+    var interfaces = {};
+    Object.keys(model.properties).forEach(function (propertyName) {
+        var property = model.properties[propertyName];
         if (!property.type) {
-            let subModel = {
+            var subModel = {
                 properties: property,
                 relations: {}
             };
             if (Array.isArray(property)) {
-                subModel.properties = _.reduce(property, (m, c) => { return _.extend(m, c); });
+                subModel.properties = _.reduce(property, function (m, c) { return _.extend(m, c); });
             }
             interfaces['I' + _.capitalize(propertyName)] = buildModelProperties(subModel, true);
         }
     });
-    _.each(_.keys(interfaces), (iface) => {
-        output.push(`interface ${iface} { \n${interfaces[iface]} \n}\n`);
+    _.each(_.keys(interfaces), function (iface) {
+        output.push("interface " + iface + " { \n" + interfaces[iface] + " \n}\n");
     });
     return output.join("\n");
 }
@@ -272,42 +278,42 @@ function buildModelImports(model) {
  * Define properties for the given model
  */
 function buildModelProperties(model, isInterface) {
-    let output = [];
+    var output = [];
     // Add Model Properties
-    Object.keys(model.properties).forEach((property) => {
+    Object.keys(model.properties).forEach(function (property) {
         if (model.isUser && property === "credentials")
             return;
-        let meta = model.properties[property];
-        let isOptional = isInterface && !meta.required ? "?" : "";
-        let defaultValue = !isInterface ? ` = ${buildPropertyDefaultValue(meta)}` : "";
+        var meta = model.properties[property];
+        var isOptional = isInterface && !meta.required ? "?" : "";
+        var defaultValue = !isInterface ? " = " + buildPropertyDefaultValue(meta) : "";
         // defaultValue = ctx.defaultValue !== "enabled" && ctx.defaultValue !== "strict" ? " : defaultValue;
         // defaultValue = ctx.defaultValue === "strict" && !meta.hasOwnProperty("default") ? " : defaultValue;
-        output.push(`  /**`);
+        output.push("  /**");
         if (model.properties[property].description) {
             if (Array.isArray(model.properties[property].description)) {
-                _.each(model.properties[property].description, desc => {
-                    output.push(`   * ${desc}`);
+                _.each(model.properties[property].description, function (desc) {
+                    output.push("   * " + desc);
                 });
             }
             else {
-                output.push(`   * ${model.properties[property].description}`);
+                output.push("   * " + model.properties[property].description);
             }
         }
-        output.push(`   * @param ${buildPropertyType(meta.type, property, model.properties[property])}`);
-        output.push(`   */`);
-        output.push(`  ${property}${isOptional}: ${buildPropertyType(meta.type, property, model.properties[property])}${defaultValue};`);
+        output.push("   * @param " + buildPropertyType(meta.type, property, model.properties[property]));
+        output.push("   */");
+        output.push("  " + property + isOptional + ": " + buildPropertyType(meta.type, property, model.properties[property]) + defaultValue + ";");
     });
     // Add Model Relations
-    Object.keys(model.relations).forEach(relation => {
-        let relationType = buildRelationType(model, relation);
+    Object.keys(model.relations).forEach(function (relation) {
+        var relationType = buildRelationType(model, relation);
         // let defaultTypeValue = !isInterface && ctx.defaultValue === "enabled" && relationType.indexOf("Array") >= 0 ? " = []" : ";
-        let defaultTypeValue = "";
+        var defaultTypeValue = "";
         // defaultTypeValue = !isInterface && ctx.defaultValue === "enabled" && relationType.indexOf("Array") === -1 ? " = null" : defaultTypeValue;
-        output.push(`  /**`);
-        output.push(`   * ${model.relations[relation].type} relation for ${model.name}`);
-        output.push(`   * @param ${relationType}`);
-        output.push(`   */`);
-        output.push(`  ${relation}${isInterface ? "?" : ""}: ${relationType}${defaultTypeValue};`);
+        output.push("  /**");
+        output.push("   * " + model.relations[relation].type + " relation for " + model.name);
+        output.push("   * @param " + relationType);
+        output.push("   */");
+        output.push("  " + relation + (isInterface ? "?" : "") + ": " + relationType + defaultTypeValue + ";");
     });
     return output.join("\n");
 }

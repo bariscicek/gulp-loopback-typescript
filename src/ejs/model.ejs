@@ -1,6 +1,7 @@
 <%- buildModelImports(model) %>
 interface I<%- modelName %> {
 <%- buildModelProperties(model, true) %>
+
   [key: string]: any;
 }
 

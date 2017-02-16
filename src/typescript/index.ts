@@ -4,7 +4,6 @@ import * as through from "through2";
 import * as gutil from "gulp-util";
 import * as _ from "lodash";
 import * as mkdirp from "mkdirp";
-import * as rimraf from "rimraf";
 import * as path from "path";
 import * as pluralize from "pluralize";
 import { readdirSync, readFileSync, writeFileSync } from "fs";
@@ -265,7 +264,7 @@ function buildRelationType(model, relationName) {
   let relation = model.relations[relationName];
   let targetClass = relation.targetClass;
   // basic type should be an interface of the targetClass
-  let basicType = (models[targetClass]) ? `I${targetClass}` : "any";
+  let basicType = (models[targetClass]) ? `${targetClass}` : "any";
   let finalType = relation.type.match(/(hasOne|belongsTo)/g)
     ? basicType : `${basicType}[]`;
   return finalType;

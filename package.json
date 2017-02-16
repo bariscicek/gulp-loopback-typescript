@@ -1,7 +1,7 @@
 {
   "name": "gulp-loopback-typescript",
-  "description": "gulp task for generating typescript definitions",
-  "version": "0.0.1",
+  "description": "gulp task for generating loopback model typescript definitions",
+  "version": "0.0.2",
   "main": "index.js",
   "author": {
     "name": "bariscicek",
@@ -23,13 +23,11 @@
     "mkdirp": "^0.5.1",
     "path": "^0.12.7",
     "pluralize": "^3.1.0",
-    "rimraf": "^2.5.4",
     "through2": "^2.0.3"
   },
   "devDependencies": {
     "@types/lodash": "^4.14.50",
     "@types/node": "^7.0.5",
-    "@types/pluralize": "0.0.27",
-    "@types/rimraf": "0.0.28"
+    "@types/pluralize": "0.0.27"
   }
 }
