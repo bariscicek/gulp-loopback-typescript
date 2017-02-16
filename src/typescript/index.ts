@@ -88,27 +88,15 @@ const typescriptPlugin = (options: IOptions) => {
     models[model.name] = model;
   });
 
-  let schema: ISchema[] = [
-    /**
-     * SDK INDEXES
-     */
-    // {
-    //   template: path.join(__dirname, "./src/ejs/index.ejs"),
-    //   output: options.dest + "/models/index.d.ts",
-    //   params: {
-    //     models: models
-    //   }
-    // }
-  ];
 
-  rimraf.sync(options.dest + "/models");
-  mkdirp.sync(options.dest + "/models");
+  let output = '';
 
   const stream = through.obj((file, enc, callback) => {
     let model: any = {};
     let modelName = null;
     let modelBaseName = "Model";
-
+    let schema: ISchema[] = [];
+    
     try {
       model = JSON.parse(file._contents.toString("utf-8"));
       if (!model.relations) {
@@ -149,7 +137,6 @@ const typescriptPlugin = (options: IOptions) => {
     ); // push
 
 
-    let output = '';
 
     schema.forEach(
       config => {
@@ -162,15 +149,15 @@ const typescriptPlugin = (options: IOptions) => {
       }
     );
 
-    output += "\n/* gulp-loopback-typescript: definitions end */";
     if (/\/\* gulp-loopback-typescript: definitions end \*\//.exec(loopBackDefitionContent)) {
-      loopBackDefitionContent = loopBackDefitionContent.replace(new RegExp("declare namespace l {[\s\S]*/\* model definitions end \*/", ""), "declare namespace l {\n" + indent(output, 3, true));
+      console.log('definitions are being updated');
+      loopBackDefitionContent = loopBackDefitionContent.replace(/declare namespace l {[\s\S]*\/\* gulp-loopback-typescript: definitions end \*\//, "declare namespace l {\n" + indent("/* gulp-loopback-typescript: definitions strt */" + output + "\n/* gulp-loopback-typescript: definitions end */", 3, true));
     } else {
-      loopBackDefitionContent = loopBackDefitionContent.replace(new RegExp("declare namespace l {", ""), "declare namespace l {\n" + indent(output, 3, true));      
+      console.log('definitions are created');
+      loopBackDefitionContent = loopBackDefitionContent.replace(new RegExp("declare namespace l {", ""), "declare namespace l {\n" + indent("/* gulp-loopback-typescript: definitions strt */" + output + "\n/* gulp-loopback-typescript: definitions end */", 3, true));
     }
 
     writeFileSync(path.join(options.dest, "index.d.ts"), loopBackDefitionContent);
-
     callback();
   });
 
@@ -300,31 +287,31 @@ function buildModelImports(model) {
   let relations = getModelRelations(model);
   let loaded = {};
   let output = [];
-  if (relations.length > 0) {
-    relations.forEach((relationName, i) => {
-      let targetClass = model.relations[relationName].targetClass;
-      if (!loaded[targetClass]) {
-        loaded[targetClass] = true;
-        output.push(`  I${targetClass}`);
-      }
-    });
-  }
+  // if (relations.length > 0) {
+  //   relations.forEach((relationName, i) => {
+  //     let targetClass = model.relations[relationName].targetClass;
+  //     if (!loaded[targetClass]) {
+  //       loaded[targetClass] = true;
+  //       output.push(`  I${targetClass}`);
+  //     }
+  //   });
+  // }
   // Add GeoPoint custom type import
-  Object.keys(model.properties).forEach((property) => {
-    var geoPointType = buildPropertyType(model.properties[property].type, property, model.properties);
-    var hasGeoPointType = geoPointType.indexOf("GeoPoint") !== -1;
-    if(hasGeoPointType) {
-        output.push("  GeoPoint");
-    }
-  });
-  if(output.length > 0) {
-      var imports = output.join(",\n");
-      output = [
-        "import {",
-        imports,
-        "} from \"../index\";\n"
-      ];
-  }
+  // Object.keys(model.properties).forEach((property) => {
+  //   var geoPointType = buildPropertyType(model.properties[property].type, property, model.properties);
+  //   var hasGeoPointType = geoPointType.indexOf("GeoPoint") !== -1;
+  //   if(hasGeoPointType) {
+  //       output.push("  GeoPoint");
+  //   }
+  // });
+  // if(output.length > 0) {
+  //     var imports = output.join(",\n");
+  //     output = [
+  //       "import {",
+  //       imports,
+  //       "} from \"../index\";\n"
+  //     ];
+  // }
 
   // build sub interfaces
   let interfaces = {};
@@ -345,7 +332,7 @@ function buildModelImports(model) {
   });
 
   _.each(_.keys(interfaces), (iface) => {
-    output.push(`interface ${iface} { \n${interfaces[iface]} \n};\n`);
+    output.push(`interface ${iface} { \n${interfaces[iface]} \n}\n`);
   });
   
   return output.join("\n");
