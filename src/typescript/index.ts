@@ -61,8 +61,10 @@ const typescriptPlugin = (options: IOptions) => {
     loopBackDefitionContent = readFileSync(path.join(options.dest, "index.d.ts")).toString("utf-8");
     
   } catch (e) {
-    console.warn(`Could not read definitions file for loopback. Try installing @types/loopback`);
-    return null;
+    loopBackDefitionContent = readFileSync(path.join(__dirname, "index.d.ts")).toString("utf-8");
+    mkdirp.sync(options.dest);
+
+    console.warn(`Could not read definitions file for loopback. Plugin copy will be used.`);
   }
 
   let _models = _.map(_.filter(readdirSync(options.modelDir), (dir) => { return dir.indexOf(".json") !== -1; }), modelFile => {
@@ -131,11 +133,9 @@ const typescriptPlugin = (options: IOptions) => {
       }
     ); // push
 
-
-
     schema.forEach(
       config => {
-        console.info("Generating: %s", `${config.output}`);
+        console.info("Processing: %s", `${config.output}`);
         output += ejs.render(readFileSync(
             require.resolve(config.template),
             { encoding: "utf-8" }),
@@ -146,7 +146,7 @@ const typescriptPlugin = (options: IOptions) => {
 
     if (/\/\* gulp-loopback-typescript: definitions end \*\//.exec(loopBackDefitionContent)) {
       console.log('definitions are being updated');
-      loopBackDefitionContent = loopBackDefitionContent.replace(/declare namespace l {[\s\S]*\/\* gulp-loopback-typescript: definitions end \*\//, "declare namespace l {\n" + indent("/* gulp-loopback-typescript: definitions strt */" + output + "\n/* gulp-loopback-typescript: definitions end */", 3, true));
+      loopBackDefitionContent = loopBackDefitionContent.replace(/declare namespace l {[\s\S]*\/\* gulp-loopback-typescript: definitions end \*\//, "declare namespace l {\n" + indent("/* gulp-loopback-typescript: definitions start */" + output + "\n/* gulp-loopback-typescript: definitions end */", 3, true));
     } else {
       console.log('definitions are created');
       loopBackDefitionContent = loopBackDefitionContent.replace(new RegExp("declare namespace l {", ""), "declare namespace l {\n" + indent("/* gulp-loopback-typescript: definitions strt */" + output + "\n/* gulp-loopback-typescript: definitions end */", 3, true));

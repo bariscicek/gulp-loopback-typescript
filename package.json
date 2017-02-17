@@ -1,7 +1,7 @@
 {
   "name": "gulp-loopback-typescript",
   "description": "gulp task for generating loopback model typescript definitions",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "main": "index.js",
   "author": {
     "name": "bariscicek",
