@@ -12,8 +12,6 @@ const ejs = require("ejs");
 
 let models = {};
 
-
-
 ejs.filters.q = (obj) => JSON.stringify(obj, null, 2);
 
 interface IOptions {
@@ -26,11 +24,11 @@ interface IOptions {
    * model directory relative to the root
    */
   modelDir?: string;
-};
+}
 
 interface IParams { 
   [s: string]: any;
-};
+}
 
 interface ISchema {
   template: string;
@@ -38,11 +36,9 @@ interface ISchema {
   output: string;
 
   params: IParams;
-};
-
+}
 
 const indent = (str: string, indent: number, space: boolean = false, tabstop = 2) => {
-
   const pad = _.map(_.range(0, space ? indent * tabstop : indent), seq => space ? " " : "\t").join("");
 
   return pad + str.replace(/\n/g, "\n" + pad);
