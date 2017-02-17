@@ -7,6 +7,7 @@ const pluralize = require("pluralize");
 const fs_1 = require("fs");
 const ejs = require("ejs");
 let models = {};
+let interfaces = {};
 ejs.filters.q = (obj) => JSON.stringify(obj, null, 2);
 const indent = (str, indent, space = false, tabstop = 2) => {
     const pad = _.map(_.range(0, space ? indent * tabstop : indent), seq => space ? " " : "\t").join("");
@@ -51,6 +52,8 @@ const typescriptPlugin = (options) => {
         let modelName = null;
         let modelBaseName = "Model";
         let schema = [];
+        // clean up to prevent repeated decleration
+        interfaces = {};
         try {
             model = JSON.parse(file._contents.toString("utf-8"));
             if (!model.relations) {
@@ -95,11 +98,11 @@ const typescriptPlugin = (options) => {
         });
         if (/\/\* gulp-loopback-typescript: definitions end \*\//.exec(loopBackDefitionContent)) {
             console.log('definitions are being updated');
-            loopBackDefitionContent = loopBackDefitionContent.replace(/declare namespace l {[\s\S]*\/\* gulp-loopback-typescript: definitions end \*\//, "declare namespace l {\n" + indent("/* gulp-loopback-typescript: definitions start */" + output + "\n/* gulp-loopback-typescript: definitions end */", 3, true));
+            loopBackDefitionContent = loopBackDefitionContent.replace(/declare namespace l {[\s\S]*\/\* gulp-loopback-typescript: definitions end \*\//, "declare namespace l {\n" + indent("/* gulp-loopback-typescript: definitions start */\n" + output + "\n/* gulp-loopback-typescript: definitions end */", 3, true));
         }
         else {
             console.log('definitions are created');
-            loopBackDefitionContent = loopBackDefitionContent.replace(new RegExp("declare namespace l {", ""), "declare namespace l {\n" + indent("/* gulp-loopback-typescript: definitions strt */" + output + "\n/* gulp-loopback-typescript: definitions end */", 3, true));
+            loopBackDefitionContent = loopBackDefitionContent.replace(new RegExp("declare namespace l {", ""), "declare namespace l {\n" + indent("/* gulp-loopback-typescript: definitions start */\n" + output + "\n/* gulp-loopback-typescript: definitions end */", 3, true));
         }
         fs_1.writeFileSync(path.join(options.dest, "index.d.ts"), loopBackDefitionContent);
         callback();
@@ -245,8 +248,7 @@ function buildModelImports(model) {
     //       "} from \"../index\";\n"
     //     ];
     // }
-    // build sub interfaces
-    let interfaces = {};
+    // build sub interdfaces
     Object.keys(model.properties).forEach((propertyName) => {
         let property = model.properties[propertyName];
         if (!property.type) {
@@ -254,9 +256,21 @@ function buildModelImports(model) {
                 properties: property,
                 relations: {}
             };
+            // get rid of array
             if (Array.isArray(property)) {
                 subModel.properties = _.reduce(property, (m, c) => { return _.extend(m, c); });
             }
+            _.each(_.keys(subModel.properties), (key) => {
+                if (typeof subModel.properties[key] === 'object') {
+                    if (!subModel.properties[key].type && !interfaces['I' + _.capitalize(key)]) {
+                        let subModel = {
+                            properties: property,
+                            relations: {}
+                        };
+                        output.concat(buildModelImports(subModel));
+                    }
+                }
+            });
             interfaces['I' + _.capitalize(propertyName)] = buildModelProperties(subModel, true);
         }
     });

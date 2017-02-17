@@ -1,11 +1,11 @@
 <%- buildModelImports(model) %>
-interface <%- modelName %> {
+interface I<%- modelName %> {
 <%- buildModelProperties(model, true) %>
 
   [key: string]: any;
 }
 
-class <%- modelName %> extends <%- modelBaseName %> implements <%- modelName %> {
+class <%- modelName %> extends <%- modelBaseName %> implements I<%- modelName %> {
 <%- buildModelProperties(model, true) %>
 
 }

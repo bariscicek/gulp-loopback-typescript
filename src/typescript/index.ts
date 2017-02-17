@@ -11,7 +11,7 @@ import { readdirSync, readFileSync, writeFileSync } from "fs";
 const ejs = require("ejs");
 
 let models = {};
-
+let interfaces = {};
 ejs.filters.q = (obj) => JSON.stringify(obj, null, 2);
 
 interface IOptions {
@@ -93,6 +93,9 @@ const typescriptPlugin = (options: IOptions) => {
     let modelName = null;
     let modelBaseName = "Model";
     let schema: ISchema[] = [];
+
+    // clean up to prevent repeated decleration
+    interfaces = {};
     
     try {
       model = JSON.parse(file._contents.toString("utf-8"));
@@ -146,10 +149,10 @@ const typescriptPlugin = (options: IOptions) => {
 
     if (/\/\* gulp-loopback-typescript: definitions end \*\//.exec(loopBackDefitionContent)) {
       console.log('definitions are being updated');
-      loopBackDefitionContent = loopBackDefitionContent.replace(/declare namespace l {[\s\S]*\/\* gulp-loopback-typescript: definitions end \*\//, "declare namespace l {\n" + indent("/* gulp-loopback-typescript: definitions start */" + output + "\n/* gulp-loopback-typescript: definitions end */", 3, true));
+      loopBackDefitionContent = loopBackDefitionContent.replace(/declare namespace l {[\s\S]*\/\* gulp-loopback-typescript: definitions end \*\//, "declare namespace l {\n" + indent("/* gulp-loopback-typescript: definitions start */\n" + output + "\n/* gulp-loopback-typescript: definitions end */", 3, true));
     } else {
       console.log('definitions are created');
-      loopBackDefitionContent = loopBackDefitionContent.replace(new RegExp("declare namespace l {", ""), "declare namespace l {\n" + indent("/* gulp-loopback-typescript: definitions strt */" + output + "\n/* gulp-loopback-typescript: definitions end */", 3, true));
+      loopBackDefitionContent = loopBackDefitionContent.replace(new RegExp("declare namespace l {", ""), "declare namespace l {\n" + indent("/* gulp-loopback-typescript: definitions start */\n" + output + "\n/* gulp-loopback-typescript: definitions end */", 3, true));
     }
 
     writeFileSync(path.join(options.dest, "index.d.ts"), loopBackDefitionContent);
@@ -308,8 +311,8 @@ function buildModelImports(model) {
   //     ];
   // }
 
-  // build sub interfaces
-  let interfaces = {};
+  // build sub interdfaces
+  
   Object.keys(model.properties).forEach((propertyName) => {
     let property = model.properties[propertyName];  
     if (!property.type) {
@@ -318,10 +321,22 @@ function buildModelImports(model) {
         relations: {}
       };
 
+      // get rid of array
       if (Array.isArray(property)) {
         subModel.properties = _.reduce(property, (m, c) => { return _.extend(m, c); });
       }
 
+      _.each(_.keys(subModel.properties), (key) => {
+        if (typeof subModel.properties[key] === 'object') {
+          if (!subModel.properties[key].type && !interfaces['I' + _.capitalize(key)]) {
+            let subModel: any = {
+              properties: property,
+              relations: {}
+            };
+            output.concat(buildModelImports(subModel));
+          }
+        }
+      });
       interfaces['I' + _.capitalize(propertyName)] = buildModelProperties(subModel, true);
     }
   });

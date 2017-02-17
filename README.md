@@ -30,6 +30,9 @@ data of each model exists in *modelDir* option.
 Note: If typings definition file of loopback exists that file will be 
 updated, otherwise plugin copy will be replaced.
 
+### Known bugs:
+- [ ] Properties with "type" name causes problem (ie. { "type": { "type": "string" }})
+
 ### Todo:
 - [ ] model methods
 - [x] relations
