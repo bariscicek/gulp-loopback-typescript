@@ -28,7 +28,7 @@ interface IOptions {
   modelDir?: string;
 };
 
-interface IParams { 
+interface IParams {
   [s: string]: any;
 };
 
@@ -63,7 +63,7 @@ const typescriptPlugin = (options: IOptions) => {
 
   try {
     loopBackDefitionContent = readFileSync(path.join(options.dest, "index.d.ts")).toString("utf-8");
-    
+
   } catch (e) {
     console.warn(`Could not read definitions file for loopback. Try installing @types/loopback`);
     return null;
@@ -95,7 +95,7 @@ const typescriptPlugin = (options: IOptions) => {
     let modelName = null;
     let modelBaseName = "Model";
     let schema: ISchema[] = [];
-    
+
     try {
       model = JSON.parse(file._contents.toString("utf-8"));
       if (!model.relations) {
@@ -215,7 +215,7 @@ function buildPropertyType(type, propName = null, prop = null) {
     case "Date":
     case "GeoPoint":
       return type;
-    
+
     default:
       return "any";
   }
@@ -315,7 +315,7 @@ function buildModelImports(model) {
   // build sub interfaces
   let interfaces = {};
   Object.keys(model.properties).forEach((propertyName) => {
-    let property = model.properties[propertyName];  
+    let property = model.properties[propertyName];
     if (!property.type) {
       let subModel: any = {
         properties: property,
@@ -333,7 +333,7 @@ function buildModelImports(model) {
   _.each(_.keys(interfaces), (iface) => {
     output.push(`interface ${iface} { \n${interfaces[iface]} \n}\n`);
   });
-  
+
   return output.join("\n");
 }
 
