@@ -11,9 +11,7 @@ import { readdirSync, readFileSync, writeFileSync } from "fs";
 const ejs = require("ejs");
 
 let models = {};
-
-
-
+let interfaces = {};
 ejs.filters.q = (obj) => JSON.stringify(obj, null, 2);
 
 interface IOptions {
@@ -26,11 +24,11 @@ interface IOptions {
    * model directory relative to the root
    */
   modelDir?: string;
-};
+}
 
 interface IParams {
   [s: string]: any;
-};
+}
 
 interface ISchema {
   template: string;
@@ -38,11 +36,9 @@ interface ISchema {
   output: string;
 
   params: IParams;
-};
-
+}
 
 const indent = (str: string, indent: number, space: boolean = false, tabstop = 2) => {
-
   const pad = _.map(_.range(0, space ? indent * tabstop : indent), seq => space ? " " : "\t").join("");
 
   return pad + str.replace(/\n/g, "\n" + pad);
@@ -63,10 +59,12 @@ const typescriptPlugin = (options: IOptions) => {
 
   try {
     loopBackDefitionContent = readFileSync(path.join(options.dest, "index.d.ts")).toString("utf-8");
-
+    
   } catch (e) {
-    console.warn(`Could not read definitions file for loopback. Try installing @types/loopback`);
-    return null;
+    loopBackDefitionContent = readFileSync(path.join(__dirname, "index.d.ts")).toString("utf-8");
+    mkdirp.sync(options.dest);
+
+    console.warn(`Could not read definitions file for loopback. Plugin copy will be used.`);
   }
 
   let _models = _.map(_.filter(readdirSync(options.modelDir), (dir) => { return dir.indexOf(".json") !== -1; }), modelFile => {
@@ -96,6 +94,9 @@ const typescriptPlugin = (options: IOptions) => {
     let modelBaseName = "Model";
     let schema: ISchema[] = [];
 
+    // clean up to prevent repeated decleration
+    interfaces = {};
+    
     try {
       model = JSON.parse(file._contents.toString("utf-8"));
       if (!model.relations) {
@@ -135,11 +136,9 @@ const typescriptPlugin = (options: IOptions) => {
       }
     ); // push
 
-
-
     schema.forEach(
       config => {
-        console.info("Generating: %s", `${config.output}`);
+        console.info("Processing: %s", `${config.output}`);
         output += ejs.render(readFileSync(
             require.resolve(config.template),
             { encoding: "utf-8" }),
@@ -150,10 +149,10 @@ const typescriptPlugin = (options: IOptions) => {
 
     if (/\/\* gulp-loopback-typescript: definitions end \*\//.exec(loopBackDefitionContent)) {
       console.log('definitions are being updated');
-      loopBackDefitionContent = loopBackDefitionContent.replace(/declare namespace l {[\s\S]*\/\* gulp-loopback-typescript: definitions end \*\//, "declare namespace l {\n" + indent("/* gulp-loopback-typescript: definitions strt */" + output + "\n/* gulp-loopback-typescript: definitions end */", 3, true));
+      loopBackDefitionContent = loopBackDefitionContent.replace(/declare namespace l {[\s\S]*\/\* gulp-loopback-typescript: definitions end \*\//, "declare namespace l {\n" + indent("/* gulp-loopback-typescript: definitions start */\n" + output + "\n/* gulp-loopback-typescript: definitions end */", 3, true));
     } else {
       console.log('definitions are created');
-      loopBackDefitionContent = loopBackDefitionContent.replace(new RegExp("declare namespace l {", ""), "declare namespace l {\n" + indent("/* gulp-loopback-typescript: definitions strt */" + output + "\n/* gulp-loopback-typescript: definitions end */", 3, true));
+      loopBackDefitionContent = loopBackDefitionContent.replace(new RegExp("declare namespace l {", ""), "declare namespace l {\n" + indent("/* gulp-loopback-typescript: definitions start */\n" + output + "\n/* gulp-loopback-typescript: definitions end */", 3, true));
     }
 
     writeFileSync(path.join(options.dest, "index.d.ts"), loopBackDefitionContent);
@@ -215,7 +214,7 @@ function buildPropertyType(type, propName = null, prop = null) {
     case "Date":
     case "GeoPoint":
       return type;
-
+    
     default:
       return "any";
   }
@@ -313,7 +312,7 @@ function buildModelImports(model) {
   // }
 
   // build sub interfaces
-  let interfaces = {};
+  
   Object.keys(model.properties).forEach((propertyName) => {
     let property = model.properties[propertyName];
     if (!property.type) {
@@ -322,10 +321,22 @@ function buildModelImports(model) {
         relations: {}
       };
 
+      // get rid of array
       if (Array.isArray(property)) {
         subModel.properties = _.reduce(property, (m, c) => { return _.extend(m, c); });
       }
 
+      _.each(_.keys(subModel.properties), (key) => {
+        if (typeof subModel.properties[key] === 'object') {
+          if (!subModel.properties[key].type && !interfaces['I' + _.capitalize(key)]) {
+            let subModel: any = {
+              properties: property,
+              relations: {}
+            };
+            output.concat(buildModelImports(subModel));
+          }
+        }
+      });
       interfaces['I' + _.capitalize(propertyName)] = buildModelProperties(subModel, true);
     }
   });
@@ -333,7 +344,6 @@ function buildModelImports(model) {
   _.each(_.keys(interfaces), (iface) => {
     output.push(`interface ${iface} { \n${interfaces[iface]} \n}\n`);
   });
-
   return output.join("\n");
 }
 

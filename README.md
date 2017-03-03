@@ -24,9 +24,14 @@ gulp.task("loopbackTypescript", () =>
 );
 ```
 
-Plugin updates loopback.d.ts file with the model definition data of each
-model exists in *modelDir* option. If there is no loopback definition file
-it is asked to be installed from [npm].
+Plugin updates @types/loopback/index.d.ts file with the model definition 
+data of each model exists in *modelDir* option. 
+
+Note: If typings definition file of loopback exists that file will be 
+updated, otherwise plugin copy will be replaced.
+
+### Known bugs:
+- [ ] Properties with "type" name causes problem (ie. { "type": { "type": "string" }})
 
 ### Todo:
 - [ ] model methods
