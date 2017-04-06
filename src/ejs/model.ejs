@@ -8,8 +8,8 @@ interface I<%- modelName %> {
 class <%- modelName %> extends <%- modelBaseName %> implements I<%- modelName %> {
 <%- buildModelProperties(model, true) %>
 
-  observe(operation: string, listener: (err: string|Error) => void): void;
-  removeobserver(operation: string, listener: (err: string|Error) => void): void;
-  notifyObserversOf(operation: string, cts: Object, callback: (err: string|Error) => void): void;
+  observe(operation: string, listener: (ctx: any, next: (err: string|Error) => void) => void): void;
+  removeobserver(operation: string, listener: (ctx: any, next: (err: string|Error) => void) => void): void;
+  notifyObserversOf(operation: string, ctx: any, callback: (err: string|Error) => void): void;
 
 }

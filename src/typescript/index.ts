@@ -96,7 +96,7 @@ const typescriptPlugin = (options: IOptions) => {
 
     // clean up to prevent repeated decleration
     interfaces = {};
-    
+
     try {
       model = JSON.parse(file._contents.toString("utf-8"));
       if (!model.relations) {
@@ -264,7 +264,7 @@ function buildRelationType(model, relationName) {
   let targetClass = relation.targetClass;
   // basic type should be an interface of the targetClass
   let basicType = (models[targetClass]) ? `${targetClass}` : "any";
-  let finalType = relation.type.match(/(hasOne|belongsTo)/g)
+  let finalType = relation.type.match(/(hasMany|hasOne|belongsTo)/g)
     ? basicType : `${basicType}[]`;
   return finalType;
 }
@@ -312,7 +312,7 @@ function buildModelImports(model) {
   // }
 
   // build sub interfaces
-  
+
   Object.keys(model.properties).forEach((propertyName) => {
     let property = model.properties[propertyName];
     if (!property.type) {
