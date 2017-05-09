@@ -59,7 +59,7 @@ const typescriptPlugin = (options: IOptions) => {
 
   try {
     loopBackDefitionContent = readFileSync(path.join(options.dest, "index.d.ts")).toString("utf-8");
-    
+
   } catch (e) {
     loopBackDefitionContent = readFileSync(path.join(__dirname, "index.d.ts")).toString("utf-8");
     mkdirp.sync(options.dest);
@@ -203,7 +203,7 @@ function buildPropertyType(type, propName = null, prop = null) {
       return `Array<${buildPropertyType(type[0])}>`
     }
 
-    return "object";
+    return "Object";
   }
 
   switch (type) {
@@ -214,7 +214,7 @@ function buildPropertyType(type, propName = null, prop = null) {
     case "Date":
     case "GeoPoint":
       return type;
-    
+
     default:
       return "any";
   }
