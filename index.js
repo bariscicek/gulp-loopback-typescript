@@ -1,4 +1,5 @@
 "use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
 var through = require("through2");
 var _ = require("lodash");
 var mkdirp = require("mkdirp");
@@ -330,7 +331,6 @@ function buildModelProperties(model, isInterface) {
     });
     return output.join("\n");
 }
-Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = typescriptPlugin;
 module.exports = typescriptPlugin;
 module.exports.default = typescriptPlugin;

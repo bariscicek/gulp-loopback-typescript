@@ -2692,6 +2692,57 @@ declare namespace l {
       }
 
       /**
+       * The GeoPoint object represents a physical location.
+       *
+       * For example:
+       *
+       * ```js
+       * var loopback = require(‘loopback’);
+       * var here = new loopback.GeoPoint({lat: 10.32424, lng: 5.84978});
+       * ```
+       *
+       * Embed a latitude / longitude point in a model.
+       *
+       * ```js
+       * var CoffeeShop = loopback.createModel('coffee-shop', {
+       *   location: 'GeoPoint'
+       * });
+       * ```
+       *
+       * You can query LoopBack models with a GeoPoint property and an attached data source using geo-spatial filters and
+       * sorting. For example, the following code finds the three nearest coffee shops.
+       *
+       * ```js
+       * CoffeeShop.attachTo(oracle);
+       * var here = new GeoPoint({lat: 10.32424, lng: 5.84978});
+       * CoffeeShop.find( {where: {location: {near: here}}, limit:3}, function(err, nearbyShops) {
+       *   console.info(nearbyShops); // [CoffeeShop, ...]
+       * });
+       * ```
+       * @class GeoPoint
+       * @property {Number} lat The latitude in degrees.
+       * @property {Number} lng The longitude in degrees.
+       *
+       * @options {Object} Options Object with two Number properties: lat and lng.
+       * @property {Number} lat The latitude point in degrees. Range: -90 to 90.
+       * @property {Number} lng The longitude point in degrees. Range: -180 to 180.
+       *
+       * @options {Array} Options Array with two Number entries: [lat,lng].
+       * @property {Number} lat The latitude point in degrees. Range: -90 to 90.
+       * @property {Number} lng The longitude point in degrees. Range: -180 to 180.
+       *
+       * @options {String} Options String with two Number entries: "lat,lng".
+       */
+      class GeoPoint {
+            public lat: number;
+
+            public lng: number;
+
+            constructor();
+            constructor(points?: any);
+      }
+
+      /**
        * Built-in User model.
        * Extends LoopBack [PersistedModel](#persistedmodel-new-persistedmodel)
        * Default `User` ACLs
@@ -2728,7 +2779,6 @@ declare namespace l {
        * @class User
        * @inherits {PersistedModel}
        */
-
       class User extends PersistedModel {
 
             /** Must be unique. */
